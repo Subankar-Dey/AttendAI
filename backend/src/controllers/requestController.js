@@ -5,7 +5,7 @@ import Attendance from '../models/Attendance.js';
 import Notification from '../models/Notification.js';
 
 // CREATE REQUEST
-export const createRequest = async (req, res) => {
+export const createRequest = catchAsync(async (req, res, next) => {
   const request = await Request.create({
     ...req.body,
     requestedBy: req.user._id
@@ -25,10 +25,10 @@ export const createRequest = async (req, res) => {
     status: 'success',
     data: request
   });
-};
+});
 
 // GET REQUESTS
-export const getRequests = async (req, res) => {
+export const getRequests = catchAsync(async (req, res, next) => {
   const filter = req.query.type ? { type: req.query.type } : {};
   
   // If not admin/staff, only see their own requests
@@ -45,17 +45,17 @@ export const getRequests = async (req, res) => {
     status: 'success',
     data: requests
   });
-};
+});
 
 // APPROVE REQUEST
-export const approveRequest = async (req, res) => {
+export const approveRequest = catchAsync(async (req, res, next) => {
   const request = await Request.findById(req.params.id);
-  if (!request) {
-    return res.status(404).json({ message: 'Request not found' });
-  }
+  if (!request) return next(new AppError('Request not found', 404));
+  
   if (request.status !== 'pending') {
     return res.status(400).json({ message: 'Request already processed' });
   }
+
   if (request.type === 'STUDENT_CREATE') {
     await User.create(request.data);
   }
@@ -66,7 +66,6 @@ export const approveRequest = async (req, res) => {
     if (attendanceId) {
       await Attendance.findByIdAndUpdate(attendanceId, { status: status || 'present' });
     } else if (date) {
-      // Find by student and date if specific ID is missing
       const startDate = new Date(date);
       startDate.setHours(0,0,0,0);
       const endDate = new Date(date);
@@ -92,9 +91,10 @@ export const approveRequest = async (req, res) => {
     target: 'individual',
     recipients: [request.requestedBy],
     type: 'in-app',
-    category: 'request', // Structured separate flow
+    category: 'request',
     sentBy: req.user._id
   });
+
   if (global._io) {
     global._io.to(request.requestedBy.toString()).emit('notification', {
       title: 'Request Approved',
@@ -102,23 +102,26 @@ export const approveRequest = async (req, res) => {
       category: 'request'
     });
   }
-  // Email alert
+
+  // Email alert (NON-BLOCKING)
   const user = await User.findById(request.requestedBy);
   if (user?.email) {
-    await sendEmail(user.email, 'Request Approved', `Your request (${request.type}) has been approved.`);
+    sendEmail(user.email, 'Request Approved', `Your request (${request.type}) has been approved.`)
+      .catch(err => console.error('Email delivery failed:', err));
   }
+
   res.json({ status: 'approved', data: request });
-};
+});
 
 // REJECT REQUEST
-export const rejectRequest = async (req, res) => {
+export const rejectRequest = catchAsync(async (req, res, next) => {
   const request = await Request.findById(req.params.id);
-  if (!request) {
-    return res.status(404).json({ message: 'Request not found' });
-  }
+  if (!request) return next(new AppError('Request not found', 404));
+  
   if (request.status !== 'pending') {
     return res.status(400).json({ message: 'Request already processed' });
   }
+
   request.status = 'rejected';
   request.adminNote = req.body.note;
   request.reviewedBy = req.user._id;
@@ -132,9 +135,10 @@ export const rejectRequest = async (req, res) => {
     target: 'individual',
     recipients: [request.requestedBy],
     type: 'in-app',
-    category: 'request', // Structured separate flow
+    category: 'request',
     sentBy: req.user._id
   });
+
   if (global._io) {
     global._io.to(request.requestedBy.toString()).emit('notification', {
       title: 'Request Rejected',
@@ -142,10 +146,13 @@ export const rejectRequest = async (req, res) => {
       category: 'request'
     });
   }
-  // Email alert
+
+  // Email alert (NON-BLOCKING)
   const user = await User.findById(request.requestedBy);
   if (user?.email) {
-    await sendEmail(user.email, 'Request Rejected', `Your request (${request.type}) was rejected.`);
+    sendEmail(user.email, 'Request Rejected', `Your request (${request.type}) was rejected.`)
+      .catch(err => console.error('Email delivery failed:', err));
   }
+
   res.json({ status: 'rejected', data: request });
-};
+});

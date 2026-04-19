@@ -96,19 +96,21 @@ export const NotificationProvider = ({ children }) => {
   const markAsRead = useCallback(async (notificationId, bucket) => {
     try {
       await api.put(`/notifications/${notificationId}/read`)
-    } catch { /* silently ignore */ }
-    
-    const updater = prev => prev.map(n => n._id === notificationId ? { ...n, isReadByMe: true } : n);
-    
-    if (bucket === 'requests') {
-      setRequests(updater)
-      setUnreadCounts(prev => ({ ...prev, requests: Math.max(0, prev.requests - 1) }))
-    } else if (bucket === 'responses') {
-      setResponses(updater)
-      setUnreadCounts(prev => ({ ...prev, responses: Math.max(0, prev.responses - 1) }))
-    } else {
-      setAnnouncements(updater)
-      setUnreadCounts(prev => ({ ...prev, announcements: Math.max(0, prev.announcements - 1) }))
+      
+      const updater = prev => prev.map(n => n._id === notificationId ? { ...n, isReadByMe: true } : n);
+      
+      if (bucket === 'requests') {
+        setRequests(updater)
+        setUnreadCounts(prev => ({ ...prev, requests: Math.max(0, prev.requests - 1) }))
+      } else if (bucket === 'responses') {
+        setResponses(updater)
+        setUnreadCounts(prev => ({ ...prev, responses: Math.max(0, prev.responses - 1) }))
+      } else {
+        setAnnouncements(updater)
+        setUnreadCounts(prev => ({ ...prev, announcements: Math.max(0, prev.announcements - 1) }))
+      }
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
     }
   }, [])
 
@@ -116,17 +118,16 @@ export const NotificationProvider = ({ children }) => {
   const markAllAsRead = useCallback(async (bucket) => {
     const list = bucket === 'requests' ? requests : bucket === 'responses' ? responses : announcements;
     const unread = list.filter(n => !n.isReadByMe)
-    await Promise.allSettled(unread.map(n => api.put(`/notifications/${n._id}/read`)))
-    
-    const updater = prev => prev.map(n => ({ ...n, isReadByMe: true }));
-    if (bucket === 'requests') {
-      setRequests(updater); setUnreadCounts(prev => ({ ...prev, requests: 0 }));
-    } else if (bucket === 'responses') {
-      setResponses(updater); setUnreadCounts(prev => ({ ...prev, responses: 0 }));
-    } else {
-      setAnnouncements(updater); setUnreadCounts(prev => ({ ...prev, announcements: 0 }));
+    if (unread.length === 0) return;
+
+    try {
+      await Promise.allSettled(unread.map(n => api.put(`/notifications/${n._id}/read`)))
+      // Sync with backend to get fresh counts and data
+      await fetchNotifications();
+    } catch (err) {
+      console.error('Failed to clear badges:', err);
     }
-  }, [announcements, requests, responses])
+  }, [announcements, requests, responses, fetchNotifications])
 
 
 

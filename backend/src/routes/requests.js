@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.post('/', authenticate, createRequest);
 router.get('/', authenticate, getRequests);
-router.put('/:id/approve', authenticate, requireRole('admin'), approveRequest);
-router.put('/:id/reject', authenticate, requireRole('admin'), rejectRequest);
+router.put('/:id/approve', authenticate, requireRole('admin', 'staff'), approveRequest);
+router.put('/:id/reject', authenticate, requireRole('admin', 'staff'), rejectRequest);
 
 export default router;
