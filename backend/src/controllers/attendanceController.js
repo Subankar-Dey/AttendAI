@@ -212,3 +212,30 @@ export const getAttendanceLogs = catchAsync(async (req, res, next) => {
 
   res.json({ status: 'success', data: { logs } });
 });
+
+export const getMyAttendance = catchAsync(async (req, res, next) => {
+  const { startDate, endDate } = req.query;
+
+  const query = { student: req.user._id };
+  if (startDate || endDate) {
+    query.date = {};
+    if (startDate) query.date.$gte = new Date(startDate);
+    if (endDate) query.date.$lte = new Date(endDate);
+  }
+
+  const records = await Attendance.find(query)
+    .populate('class', 'name')
+    .populate('subject', 'name')
+    .sort({ date: -1 });
+
+  const total = records.length;
+  const present = records.filter(r => r.status === 'present').length;
+  const absent = records.filter(r => r.status === 'absent').length;
+  const late = records.filter(r => r.status === 'late').length;
+  const percentage = total > 0 ? ((present + late * 0.5) / total * 100).toFixed(1) : 0;
+
+  res.json({
+    status: 'success',
+    data: { records, stats: { total, present, absent, late, percentage } }
+  });
+});

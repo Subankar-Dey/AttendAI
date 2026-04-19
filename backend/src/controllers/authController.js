@@ -132,8 +132,7 @@ export const login = catchAsync(async (req, res, next) => {
 export const getMe = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user._id)
     .populate('department', 'name code')
-    .populate('class', 'name')
-    .populate('classTeacher', 'name email');
+    .populate('class', 'name');
 
   res.json({ status: 'success', data: { user } });
 });

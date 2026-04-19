@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/profiles', requireRole('admin'), getAllProfiles);
-router.get('/', getAllUsers);
+router.get('/', requireRole('admin', 'staff'), getAllUsers);
 router.get('/students', getStudents);
 router.get('/staff', getStaff);
 router.get('/:id', getUserById);
