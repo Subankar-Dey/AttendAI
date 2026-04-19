@@ -36,6 +36,22 @@ export const send = catchAsync(async (req, res, next) => {
 
   await notification.populate('sentBy', 'name email');
 
+  // Real-time broadcast
+  if (global._io) {
+    const payload = {
+      _id: notification._id,
+      title: notification.title,
+      message: notification.message,
+      category: notification.category,
+      sentBy: notification.sentBy
+    };
+
+    if (target === 'students') global._io.to('students').emit('notification', payload);
+    else if (target === 'staff') global._io.to('staff').emit('notification', payload);
+    else if (target === 'individual') global._io.to(recipients[0].toString()).emit('notification', payload);
+    else global._io.emit('notification', payload);
+  }
+
   res.status(201).json({ status: 'success', data: { notification } });
 });
 

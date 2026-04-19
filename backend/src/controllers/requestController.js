@@ -26,6 +26,16 @@ export const createRequest = catchAsync(async (req, res, next) => {
     sentBy: req.user._id
   });
 
+  // Real-time notify staff
+  if (global._io) {
+    global._io.emit('notification', {
+      _id: notification._id,
+      title: 'New Attendance Request',
+      message: `${req.user.name} submitted a new ${req.body.type.replace(/_/g, ' ')}.`,
+      category: 'request'
+    });
+  }
+
   res.status(201).json({
     status: 'success',
     data: request
@@ -102,6 +112,7 @@ export const approveRequest = catchAsync(async (req, res, next) => {
 
   if (global._io) {
     global._io.to(request.requestedBy.toString()).emit('notification', {
+      _id: notification._id,
       title: 'Request Approved',
       message: `Your request (${request.type}) has been approved.`,
       category: 'request'
@@ -146,6 +157,7 @@ export const rejectRequest = catchAsync(async (req, res, next) => {
 
   if (global._io) {
     global._io.to(request.requestedBy.toString()).emit('notification', {
+      _id: notification._id,
       title: 'Request Rejected',
       message: `Your request (${request.type}) was rejected.`,
       category: 'request'

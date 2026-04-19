@@ -53,7 +53,7 @@ export const NotificationProvider = ({ children }) => {
   /* ── Socket real-time push ── */
   const addNotification = useCallback((notification) => {
     const newNotification = {
-      _id: Date.now().toString(),
+      _id: notification._id || Date.now().toString(),
       ...notification,
       isReadByMe: false,
       createdAt: new Date().toISOString(),
