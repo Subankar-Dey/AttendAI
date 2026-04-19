@@ -15,6 +15,11 @@ const notificationSchema = new mongoose.Schema({
     enum: ['email', 'sms', 'in-app', 'push'],
     default: 'in-app'
   },
+  target: {
+    type: String,
+    enum: ['all', 'students', 'staff', 'individual'],
+    default: 'all'
+  },
   recipient: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

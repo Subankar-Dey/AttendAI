@@ -105,16 +105,17 @@ const Navbar = ({ onMenuClick }) => {
                     ) : (
                       notifications.map((notif) => (
                         <div
-                          key={notif.id}
+                          key={notif._id || notif.id}
                           className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                            !notif.read ? 'bg-blue-50/60' : ''
+                            !notif.isReadByMe && !notif.read ? 'bg-blue-50/60' : ''
                           }`}
-                          onClick={() => markAsRead(notif.id)}
+                          onClick={() => markAsRead(notif._id || notif.id)}
                         >
-                          {!notif.read && (
+                          {(!notif.isReadByMe && !notif.read) && (
                             <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2 align-middle" />
                           )}
-                          <p className="text-sm text-gray-900 inline">{notif.message}</p>
+                          {notif.title && <p className="text-xs font-semibold text-gray-700">{notif.title}</p>}
+                          <p className="text-sm text-gray-800">{notif.message}</p>
                           <p className="text-xs text-gray-400 mt-1">
                             {new Date(notif.createdAt).toLocaleString()}
                           </p>
