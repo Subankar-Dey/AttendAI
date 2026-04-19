@@ -29,6 +29,13 @@ const attendanceSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'Marked by is required']
   },
+  checkIn: Date,
+  checkOut: Date,
+  source: {
+    type: String,
+    enum: ['manual', 'biometric', 'RFID'],
+    default: 'manual'
+  },
   notes: {
     type: String,
     trim: true

@@ -59,11 +59,48 @@ const userSchema = new mongoose.Schema({
   },
   rollNumber: {
     type: String,
+    trim: true,
+    unique: true,
+    sparse: true
+  },
+  dob: Date,
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other']
+  },
+  address: {
+    type: String,
+    trim: true
+  },
+  course: {
+    type: String,
+    trim: true
+  },
+  semester: {
+    type: Number
+  },
+  admissionDate: Date,
+  parentName: {
+    type: String,
+    trim: true
+  },
+  parentContact: {
+    type: String,
+    trim: true
+  },
+  parentRelationship: {
+    type: String,
+    trim: true
+  },
+  disciplinaryNotes: {
+    type: String,
     trim: true
   },
   staffId: {
     type: String,
-    trim: true
+    trim: true,
+    unique: true,
+    sparse: true
   },
   isActive: {
     type: Boolean,

@@ -16,12 +16,20 @@ export const createRequest = async (req, res) => {
   });
 };
 
-// GET ALL REQUESTS
+// GET REQUESTS
 export const getRequests = async (req, res) => {
   const filter = req.query.type ? { type: req.query.type } : {};
+  
+  // If not admin/staff, only see their own requests
+  if (req.user.role === 'student') {
+    filter.requestedBy = req.user._id;
+  }
+
   const requests = await Request.find(filter)
-    .populate('requestedBy', 'name email')
-    .populate('reviewedBy', 'name');
+    .populate('requestedBy', 'name email rollNumber')
+    .populate('reviewedBy', 'name')
+    .sort({ createdAt: -1 });
+
   res.json({
     status: 'success',
     data: requests
@@ -40,11 +48,27 @@ export const approveRequest = async (req, res) => {
   if (request.type === 'STUDENT_CREATE') {
     await User.create(request.data);
   }
+  
   if (request.type === 'ATTENDANCE_CORRECTION') {
-    const { attendanceId, status } = request.data;
-    await Attendance.findByIdAndUpdate(attendanceId, { status: status || 'present' });
+    const { attendanceId, status, date } = request.data;
+    
+    if (attendanceId) {
+      await Attendance.findByIdAndUpdate(attendanceId, { status: status || 'present' });
+    } else if (date) {
+      // Find by student and date if specific ID is missing
+      const startDate = new Date(date);
+      startDate.setHours(0,0,0,0);
+      const endDate = new Date(date);
+      endDate.setHours(23,59,59,999);
+      
+      await Attendance.findOneAndUpdate(
+        { student: request.requestedBy, date: { $gte: startDate, $lte: endDate } },
+        { status: status || 'present' },
+        { upsert: false }
+      );
+    }
   }
-  // Add more request types as needed
+
   request.status = 'approved';
   request.reviewedBy = req.user._id;
   request.reviewedAt = new Date();

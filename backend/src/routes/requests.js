@@ -11,7 +11,7 @@ import { requireRole } from '../middleware/roleCheck.js';
 const router = express.Router();
 
 router.post('/', authenticate, createRequest);
-router.get('/', authenticate, requireRole('admin'), getRequests);
+router.get('/', authenticate, getRequests);
 router.put('/:id/approve', authenticate, requireRole('admin'), approveRequest);
 router.put('/:id/reject', authenticate, requireRole('admin'), rejectRequest);
 
