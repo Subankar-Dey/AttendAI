@@ -96,10 +96,10 @@ export const approveRequest = async (req, res) => {
     sentBy: req.user._id
   });
   if (global._io) {
-    global._io.emit('notification', {
-      userId: request.requestedBy.toString(),
+    global._io.to(request.requestedBy.toString()).emit('notification', {
       title: 'Request Approved',
-      message: `Your request (${request.type}) has been approved.`
+      message: `Your request (${request.type}) has been approved.`,
+      category: 'request'
     });
   }
   // Email alert
@@ -136,10 +136,10 @@ export const rejectRequest = async (req, res) => {
     sentBy: req.user._id
   });
   if (global._io) {
-    global._io.emit('notification', {
-      userId: request.requestedBy.toString(),
+    global._io.to(request.requestedBy.toString()).emit('notification', {
       title: 'Request Rejected',
-      message: `Your request (${request.type}) was rejected.`
+      message: `Your request (${request.type}) was rejected.`,
+      category: 'request'
     });
   }
   // Email alert

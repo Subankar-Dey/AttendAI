@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import api from '../services/api'
 import socket from '../services/socket'
+import { useAuth } from './AuthContext'
 
 const NotificationContext = createContext(null)
 
@@ -74,10 +75,22 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     socket.on('notification', (data) => {
-      addNotification({ title: data.title, message: data.message })
+      addNotification({ 
+        title: data.title, 
+        message: data.message, 
+        category: data.category || 'announcement' 
+      })
     })
     return () => socket.off('notification')
   }, [addNotification])
+
+  // Join private room for targeted real-time updates
+  const { user } = useAuth()
+  useEffect(() => {
+    if (user?._id) {
+      socket.emit('join', user._id)
+    }
+  }, [user])
 
   /* ── Mark single as read (DB + local) ── */
   const markAsRead = useCallback(async (notificationId, bucket) => {
@@ -115,14 +128,7 @@ export const NotificationProvider = ({ children }) => {
     }
   }, [announcements, requests, responses])
 
-  /* ── Remove locally (after delete) ── */
-  const removeNotification = useCallback((notificationId) => {
-    setNotifications(prev => {
-      const removed = prev.find(n => n._id === notificationId)
-      if (removed && !removed.isReadByMe) setUnreadCount(c => Math.max(0, c - 1))
-      return prev.filter(n => n._id !== notificationId)
-    })
-  }, [])
+
 
   const clearAll = useCallback(() => {
     setAnnouncements([])

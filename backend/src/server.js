@@ -26,6 +26,14 @@ const startServer = async () => {
     global._io = io;
     io.on('connection', (socket) => {
       console.log('🔔 Socket.IO client connected:', socket.id);
+      
+      socket.on('join', (userId) => {
+        if (userId) {
+          socket.join(userId.toString());
+          console.log(`👤 User ${userId} joined their private room.`);
+        }
+      });
+
       socket.on('disconnect', () => {
         console.log('Socket.IO client disconnected:', socket.id);
       });
