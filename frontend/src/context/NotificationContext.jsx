@@ -8,6 +8,17 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
 
+  const addNotification = useCallback((notification) => {
+    const newNotification = {
+      id: Date.now(),
+      ...notification,
+      read: false,
+      createdAt: new Date().toISOString(),
+    }
+    setNotifications(prev => [newNotification, ...prev])
+    setUnreadCount(prev => prev + 1)
+  }, [])
+
   useEffect(() => {
     socket.on('notification', (data) => {
       addNotification({
@@ -20,17 +31,6 @@ export const NotificationProvider = ({ children }) => {
       socket.off('notification')
     }
   }, [addNotification])
-
-  const addNotification = useCallback((notification) => {
-    const newNotification = {
-      id: Date.now(),
-      ...notification,
-      read: false,
-      createdAt: new Date().toISOString(),
-    }
-    setNotifications(prev => [newNotification, ...prev])
-    setUnreadCount(prev => prev + 1)
-  }, [])
 
   const markAsRead = useCallback((notificationId) => {
     setNotifications(prev =>

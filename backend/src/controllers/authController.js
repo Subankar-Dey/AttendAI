@@ -1,9 +1,43 @@
+/**
+ * Authentication Controller
+ * Handles user registration, login, and JWT token management
+ * 
+ * @module authController
+ * @requires crypto - For generating secure tokens
+ * @requires jsonwebtoken - For JWT token generation and verification
+ * @requires ../models/User.js - User data model
+ * @requires ../utils/AppError.js - Custom error handling
+ * @requires ../utils/catchAsync.js - Async/await wrapper for error handling
+ */
+
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import AppError from '../utils/AppError.js';
 import catchAsync from '../utils/catchAsync.js';
 
+/**
+ * Register a new user
+ * Validates input, checks for duplicate email, creates user with hashed password
+ * Issues JWT token valid for 7 days by default
+ * 
+ * @route POST /api/auth/register
+ * @param {string} req.body.name - User's full name (required)
+ * @param {string} req.body.email - User's email address (required, must be unique)
+ * @param {string} req.body.password - User's password (required, bcrypt hashed on save)
+ * @param {string} req.body.role - User role: 'admin', 'staff', or 'student' (defaults to 'student')
+ * @param {string} req.body.department - Department ID (optional, for students)
+ * @param {string} req.body.class - Class ID (optional, for students)
+ * @returns {object} {status: 'success', token: JWT, data: {user}}
+ * @throws {AppError} 400 - Missing required fields or duplicate email
+ * 
+ * @example
+ * // Request
+ * POST /api/auth/register
+ * { "name": "John Doe", "email": "john@example.com", "password": "secure123", "role": "student" }
+ * // Response
+ * { "status": "success", "token": "eyJhbGc...", "data": { "user": {...} } }
+ */
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, password, role, department, class: studentClass } = req.body;
 
@@ -40,6 +74,25 @@ export const register = catchAsync(async (req, res, next) => {
   });
 });
 
+/**
+ * Login user and issue JWT token
+ * Validates credentials against database, compares passwords using bcrypt
+ * Updates lastLogin timestamp and returns JWT for authenticated requests
+ * 
+ * @route POST /api/auth/login
+ * @param {string} req.body.email - User's registered email
+ * @param {string} req.body.password - User's password (compared with bcrypt hash)
+ * @returns {object} {status: 'success', token: JWT, data: {user}}
+ * @throws {AppError} 400 - Missing credentials
+ * @throws {AppError} 401 - Invalid email or password
+ * 
+ * @example
+ * // Request
+ * POST /api/auth/login
+ * { "email": "john@example.com", "password": "secure123" }
+ * // Response
+ * { "status": "success", "token": "eyJhbGc...", "data": { "user": {...} } }
+ */
 export const login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 

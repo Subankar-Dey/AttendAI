@@ -1,3 +1,17 @@
+/**
+ * Attendance Controller
+ * Manages marking, retrieving, and updating student attendance records
+ * Supports bulk operations and maintains audit logs for compliance
+ * 
+ * @module attendanceController
+ * @requires ../models/Attendance.js - Attendance record model
+ * @requires ../models/User.js - User model for validation
+ * @requires ../models/AuditLog.js - Audit trail model
+ * @requires ../utils/AppError.js - Custom error handler
+ * @requires ../utils/catchAsync.js - Async wrapper for error handling
+ * @requires ../middleware/auditLogger.js - Audit logging middleware
+ */
+
 import Attendance from '../models/Attendance.js';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
@@ -5,6 +19,38 @@ import AppError from '../utils/AppError.js';
 import catchAsync from '../utils/catchAsync.js';
 import logAction from '../middleware/auditLogger.js';
 
+/**
+ * Mark attendance for multiple students
+ * Accepts array of attendance entries and creates or updates records
+ * Each entry specifies student, class, date, and status (present/absent/late)
+ * Maintains audit trail for staff accountability
+ * 
+ * @route POST /api/attendance/mark
+ * @middleware authMiddleware - Requires valid JWT
+ * @middleware roleCheck('staff', 'admin') - Only staff and admins can mark
+ * @param {object} req.body.attendance - Array of attendance entries
+ * @param {string} req.body.attendance[].student - Student user ID
+ * @param {string} req.body.attendance[].class - Class ID
+ * @param {string} req.body.attendance[].subject - Subject ID
+ * @param {date} req.body.attendance[].date - Date of attendance (ISO format)
+ * @param {string} req.body.attendance[].status - 'present' | 'absent' | 'late'
+ * @returns {object} {status: 'success', message, data: {results}}
+ * @throws {AppError} 400 - Invalid attendance array
+ * 
+ * @example
+ * // Request
+ * POST /api/attendance/mark
+ * {
+ *   "attendance": [
+ *     {"student": "507f1f77bcf86cd799439011", "class": "507f1f77bcf86cd799439012", 
+ *      "subject": "Math", "date": "2024-01-15", "status": "present"},
+ *     {"student": "507f1f77bcf86cd799439013", "class": "507f1f77bcf86cd799439012", 
+ *      "subject": "Math", "date": "2024-01-15", "status": "absent"}
+ *   ]
+ * }
+ * // Response
+ * {"status": "success", "message": "Attendance marked.", "data": {"results": [...]}}
+ */
 export const markAttendance = catchAsync(async (req, res, next) => {
   const { attendance } = req.body;
 
