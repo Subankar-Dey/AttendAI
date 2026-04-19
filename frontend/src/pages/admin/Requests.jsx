@@ -19,6 +19,9 @@ export default function Requests() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [activeTab, setActiveTab] = useState('pending');
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [processingId, setProcessingId] = useState(null);
 
   const toast = (msg, type = 'success') => {
     const id = Date.now()
@@ -48,13 +51,19 @@ export default function Requests() {
     }
   };
 
-  const decline = async (id) => {
-    const note = prompt('Enter decline reason (will be visible to student):');
-    if (note === null) return; // Cancelled
+  const decline = (id) => {
+    setProcessingId(id);
+    setDeclineReason('');
+    setShowDeclineModal(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!declineReason.trim()) return toast('Please provide a reason', 'error');
     
     try {
-      await api.put(`/requests/${id}/reject`, { note });
+      await api.put(`/requests/${processingId}/reject`, { note: declineReason });
       toast('Request declined');
+      setShowDeclineModal(false);
       fetchRequests();
     } catch (err) {
       toast(err.response?.data?.message || 'Action failed', 'error');
@@ -200,6 +209,43 @@ export default function Requests() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Decline Modal */}
+      {showDeclineModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Decline Request</h2>
+              <button onClick={() => setShowDeclineModal(false)} className="text-gray-400 hover:text-gray-600 transition">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-500">Provide a reason for declining this request. This will be sent as a notification to the student.</p>
+              <textarea
+                autoFocus
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                placeholder="Reason for rejection..."
+                rows={4}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none"
+              />
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowDeclineModal(false)}
+                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-2xl text-sm font-bold hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmReject}
+                  className="flex-[2] px-4 py-3 bg-red-600 text-white rounded-2xl text-sm font-bold hover:bg-red-700 transition shadow-lg shadow-red-200"
+                >
+                  Confirm Decline
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
