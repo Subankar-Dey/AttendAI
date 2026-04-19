@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
@@ -10,6 +10,22 @@ const Navbar = ({ onMenuClick }) => {
   const navigate = useNavigate()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const notifRef = useRef(null)
+  const userMenuRef = useRef(null)
+
+  // Handle click outside to close menus
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout()
@@ -52,31 +68,24 @@ const Navbar = ({ onMenuClick }) => {
         <div className="flex items-center gap-2 ml-auto">
 
           {/* ── Notifications ── */}
-          <div className="relative">
+          <div className="relative" ref={notifRef}>
             <button
               onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false) }}
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className={`relative p-2 rounded-lg transition-colors ${showNotifications ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
             >
-              <Bell size={20} className="text-gray-600" />
+              <Bell size={20} className={showNotifications ? 'text-blue-600' : 'text-gray-600'} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center border-2 border-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <>
-                {/* Backdrop */}
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={closeAll}
-                />
-                {/* Dropdown */}
-                <div
-                  className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200"
-                  style={{ animation: 'fadeSlideDown 0.15s ease-out' }}
-                >
+              <div
+                className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-200"
+                style={{ animation: 'fadeSlideDown 0.15s ease-out' }}
+              >
                   <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Notifications</h3>
                     <div className="flex items-center gap-3">
@@ -124,22 +133,21 @@ const Navbar = ({ onMenuClick }) => {
                     )}
                   </div>
                 </div>
-              </>
             )}
           </div>
 
           {/* ── User Menu ── */}
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false) }}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${showUserMenu ? 'bg-gray-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'}`}
             >
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-700 font-semibold text-sm">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${showUserMenu ? 'bg-blue-600' : 'bg-blue-100'}`}>
+                <span className={`font-semibold text-sm ${showUserMenu ? 'text-white' : 'text-blue-700'}`}>
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               </div>
-              <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
+              <span className="hidden md:block text-sm font-medium max-w-[120px] truncate">
                 {user?.name}
               </span>
               <ChevronDown
@@ -149,17 +157,10 @@ const Navbar = ({ onMenuClick }) => {
             </button>
 
             {showUserMenu && (
-              <>
-                {/* Backdrop */}
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={closeAll}
-                />
-                {/* Dropdown */}
-                <div
-                  className="absolute right-0 mt-2 z-50 w-56 sm:w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden"
-                  style={{ animation: 'fadeSlideDown 0.15s ease-out' }}
-                >
+              <div
+                className="absolute right-0 mt-2 z-50 w-56 sm:w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+                style={{ animation: 'fadeSlideDown 0.15s ease-out' }}
+              >
                   {/* User info header */}
                   <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
                     <div className="flex items-center gap-3">
@@ -198,7 +199,6 @@ const Navbar = ({ onMenuClick }) => {
                     </button>
                   </div>
                 </div>
-              </>
             )}
           </div>
 

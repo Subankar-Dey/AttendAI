@@ -20,10 +20,6 @@ const notificationSchema = new mongoose.Schema({
     enum: ['all', 'students', 'staff', 'individual'],
     default: 'all'
   },
-  recipient: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
   recipients: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

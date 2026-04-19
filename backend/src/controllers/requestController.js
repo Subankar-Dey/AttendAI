@@ -10,6 +10,16 @@ export const createRequest = async (req, res) => {
     ...req.body,
     requestedBy: req.user._id
   });
+
+  // Notify Admins/Staff that a new request was submitted
+  await Notification.create({
+    title: 'New Attendance Request',
+    message: `${req.user.name} submitted a new ${req.body.type.replace(/_/g, ' ')}.`,
+    target: 'staff',
+    type: 'in-app',
+    sentBy: req.user._id
+  });
+
   res.status(201).json({
     status: 'success',
     data: request
@@ -74,11 +84,12 @@ export const approveRequest = async (req, res) => {
   request.reviewedAt = new Date();
   await request.save();
 
-  // Send notification to requester
+  // Send notification to requester (STRICTLY TARGETED)
   await Notification.create({
     title: 'Request Approved',
     message: `Your request (${request.type}) has been approved.`,
-    recipient: request.requestedBy,
+    target: 'individual',
+    recipients: [request.requestedBy],
     type: 'in-app',
     sentBy: req.user._id
   });
@@ -112,11 +123,12 @@ export const rejectRequest = async (req, res) => {
   request.reviewedAt = new Date();
   await request.save();
 
-  // Send notification to requester
+  // Send notification to requester (STRICTLY TARGETED)
   await Notification.create({
     title: 'Request Rejected',
     message: `Your request (${request.type}) was rejected.`,
-    recipient: request.requestedBy,
+    target: 'individual',
+    recipients: [request.requestedBy],
     type: 'in-app',
     sentBy: req.user._id
   });

@@ -48,13 +48,13 @@ export default function Requests() {
     }
   };
 
-  const reject = async (id) => {
-    const note = prompt('Enter rejection reason (will be visible to student):');
+  const decline = async (id) => {
+    const note = prompt('Enter decline reason (will be visible to student):');
     if (note === null) return; // Cancelled
     
     try {
       await api.put(`/requests/${id}/reject`, { note });
-      toast('Request rejected');
+      toast('Request declined');
       fetchRequests();
     } catch (err) {
       toast(err.response?.data?.message || 'Action failed', 'error');
@@ -172,10 +172,10 @@ export default function Requests() {
                       Approve
                     </button>
                     <button 
-                      onClick={() => reject(r._id)}
+                      onClick={() => decline(r._id)}
                       className="flex-1 md:w-32 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-100 border border-red-100 transition"
                     >
-                      Reject
+                      Decline
                     </button>
                   </div>
                 )}

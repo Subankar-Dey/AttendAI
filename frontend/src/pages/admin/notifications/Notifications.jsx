@@ -113,14 +113,25 @@ const PRIORITY = {
 }
 
 /* ── Target badge ── */
-const TARGET_LABEL = { all: '👥 All Users', students: '🎓 Students', staff: '👨‍🏫 Staff' }
+const TARGET_LABEL = { 
+  all: '👥 All Users', 
+  students: '🎓 Students', 
+  staff: '👨‍🏫 Staff',
+  individual: '👤 Individual'
+}
 
 /* ════════════════════════════════════════ */
 export default function Notifications() {
-  const [form, setForm] = useState({ title: '', message: '', target: 'all', priority: 'normal' })
+  const [form, setForm] = useState({ title: '', message: '', target: 'all', priority: 'normal', recipientId: '' })
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState([])
   const [loadingSent, setLoadingSent] = useState(true)
+  
+  // User Search
+  const [userSearch, setUserSearch] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
   const [toasts, setToasts] = useState([])
 
   // Edit
@@ -150,6 +161,23 @@ export default function Notifications() {
 
   useEffect(() => { fetchSent() }, [fetchSent])
 
+  /* ── User Search Effect ── */
+  useEffect(() => {
+    if (form.target !== 'individual' || userSearch.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const delayDebounce = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await api.get(`/users?search=${userSearch}&limit=5`);
+        setSearchResults(res.data.data?.users || []);
+      } catch (err) { console.error(err); }
+      finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [userSearch, form.target]);
+
   /* ── Send ── */
   const handleSend = async (e) => {
     e.preventDefault()
@@ -158,7 +186,9 @@ export default function Notifications() {
     try {
       await api.post('/notifications/send', form)
       toast('Notification sent successfully! 🔔')
-      setForm({ title: '', message: '', target: 'all', priority: 'normal' })
+      setForm({ title: '', message: '', target: 'all', priority: 'normal', recipientId: '' })
+      setUserSearch('')
+      setSelectedUser(null)
       await fetchSent()
     } catch (err) {
       toast(err.response?.data?.message || 'Failed to send', 'error')
@@ -232,12 +262,80 @@ export default function Notifications() {
               {/* Target */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Send To</label>
-                <select className={inputCls} value={form.target} onChange={e => setForm(f => ({ ...f, target: e.target.value }))}>
+                <select className={inputCls} value={form.target} onChange={e => {
+                  setForm(f => ({ ...f, target: e.target.value, recipientId: '' }));
+                  setSelectedUser(null);
+                  setUserSearch('');
+                }}>
                   <option value="all">👥 All Users</option>
                   <option value="students">🎓 Students Only</option>
                   <option value="staff">👨‍🏫 Staff Only</option>
+                  <option value="individual">👤 Specific User</option>
                 </select>
               </div>
+
+              {/* Individual User Search */}
+              {form.target === 'individual' && (
+                <div className="relative animate-[fadeSlideDown_0.2s_ease]">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Search Recipient <span className="text-red-500">*</span></label>
+                  {!selectedUser ? (
+                    <div className="relative">
+                      <input 
+                        className={inputCls}
+                        value={userSearch}
+                        onChange={e => setUserSearch(e.target.value)}
+                        placeholder="Search by name, email or ID..."
+                        autoFocus
+                      />
+                      {searching && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                        </div>
+                      )}
+                      
+                      {searchResults.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                          {searchResults.map(u => (
+                            <button
+                              key={u._id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedUser(u);
+                                setForm(f => ({ ...f, recipientId: u._id }));
+                                setUserSearch('');
+                                setSearchResults([]);
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
+                            >
+                              <p className="text-sm font-semibold text-gray-900">{u.name}</p>
+                              <p className="text-xs text-gray-500">{u.email} • {u.role}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                          {selectedUser.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-blue-900">{selectedUser.name}</p>
+                          <p className="text-xs text-blue-700">{selectedUser.email}</p>
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => { setSelectedUser(null); setForm(f => ({ ...f, recipientId: '' })) }}
+                        className="p-1 px-2 text-xs font-bold text-blue-600 hover:bg-blue-100 rounded-lg transition"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Priority */}
               <div>
@@ -269,7 +367,7 @@ export default function Notifications() {
                 <p className="text-xs text-gray-400 mt-1 text-right">{form.message.length} chars</p>
               </div>
 
-              <button type="submit" disabled={sending || !form.title.trim() || !form.message.trim()}
+              <button type="submit" disabled={sending || !form.title.trim() || !form.message.trim() || (form.target === 'individual' && !form.recipientId)}
                 className="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition shadow-sm shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {sending ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending...</>

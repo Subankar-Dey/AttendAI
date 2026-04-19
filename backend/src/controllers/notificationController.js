@@ -18,6 +18,8 @@ export const send = catchAsync(async (req, res, next) => {
   } else if (target === 'staff') {
     const users = await User.find({ role: 'staff', isActive: true }).select('_id');
     recipients = users.map(u => u._id);
+  } else if (target === 'individual' && req.body.recipientId) {
+    recipients = [req.body.recipientId];
   }
   // 'all' → empty recipients array means broadcast to everyone
 
@@ -55,16 +57,32 @@ export const getNotifications = catchAsync(async (req, res, next) => {
   const { page = 1, limit = 20 } = req.query;
   const userId = req.user._id;
 
-  // User sees: their own specific notifications OR broadcasts (empty recipients)
+  // User sees: 
+  // 1. Their own specific notifications
+  // 2. Targeted to their role (students/staff)
+  // 3. Global broadcasts
   const query = {
     $or: [
       { recipients: userId },
-      { recipients: { $size: 0 } }
+      { $and: [ { target: 'students' }, { recipients: { $exists: true } } ], _roleFilter: 'student' }, // logic handled below
+      { $and: [ { target: 'staff' }, { recipients: { $exists: true } } ], _roleFilter: 'staff' },
+      { target: 'all' }
     ]
   };
 
-  const total = await Notification.countDocuments(query);
-  const notifications = await Notification.find(query)
+  // Re-writing query for better precision based on current user role
+  const finalQuery = {
+    $or: [
+      { recipients: userId },
+      { target: 'all' }
+    ]
+  };
+
+  if (req.user.role === 'student') finalQuery.$or.push({ target: 'students' });
+  if (req.user.role === 'staff' || req.user.role === 'admin') finalQuery.$or.push({ target: 'staff' });
+
+  const total = await Notification.countDocuments(finalQuery);
+  const notifications = await Notification.find(finalQuery)
     .populate('sentBy', 'name email')
     .skip((page - 1) * limit)
     .limit(Number(limit))
