@@ -14,6 +14,7 @@ import {
   ChevronRight,
   FileText,
   Send,
+  Inbox,
   BookOpen,
   X,
 } from 'lucide-react'
@@ -30,6 +31,7 @@ const Sidebar = ({ collapsed, onCollapse, mobileOpen, onMobileClose }) => {
         { path: '/admin/users', label: 'Users', icon: Users },
         { path: '/admin/academics', label: 'Academics', icon: BookOpen },
         { path: '/admin/attendance', label: 'Attendance', icon: ClipboardCheck },
+        { path: '/admin/requests', label: 'Requests', icon: Inbox },
         { path: '/admin/reports', label: 'Reports', icon: BarChart3 },
       ],
     },
@@ -56,6 +58,7 @@ const Sidebar = ({ collapsed, onCollapse, mobileOpen, onMobileClose }) => {
         { path: '/staff/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/staff/mark-attendance', label: 'Mark Attendance', icon: ClipboardCheck },
         { path: '/staff/classes', label: 'View Classes', icon: GraduationCap },
+        { path: '/staff/requests', label: 'Requests', icon: Inbox },
         { path: '/staff/absentees', label: 'Absentees', icon: FileText },
       ],
     },

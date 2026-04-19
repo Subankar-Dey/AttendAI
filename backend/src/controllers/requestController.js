@@ -3,11 +3,16 @@ import Request from '../models/Request.js';
 import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
 import Notification from '../models/Notification.js';
+import catchAsync from '../utils/catchAsync.js';
+import AppError from '../utils/AppError.js';
 
 // CREATE REQUEST
 export const createRequest = catchAsync(async (req, res, next) => {
+  const { type, data, priority } = req.body;
   const request = await Request.create({
-    ...req.body,
+    type,
+    data,
+    priority: priority || 'medium',
     requestedBy: req.user._id
   });
 

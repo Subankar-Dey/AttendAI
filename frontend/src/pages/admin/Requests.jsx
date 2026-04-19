@@ -61,6 +61,19 @@ export default function Requests() {
     }
   };
 
+  const priorityBadge = (priority) => {
+    const colors = { 
+      low: 'bg-gray-100 text-gray-600 border-gray-200', 
+      medium: 'bg-blue-100 text-blue-600 border-blue-200', 
+      high: 'bg-red-100 text-red-600 border-red-200' 
+    }
+    return (
+      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${colors[priority || 'medium']}`}>
+        {priority || 'medium'}
+      </span>
+    )
+  };
+
   useEffect(() => {
     fetchRequests();
   }, []);
@@ -132,6 +145,7 @@ export default function Requests() {
                     }`}>
                       {r.status}
                     </span>
+                    {priorityBadge(r.priority)}
                   </div>
                   
                   <h3 className="text-base font-bold text-gray-900 mb-1 flex items-center gap-2">

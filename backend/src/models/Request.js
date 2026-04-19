@@ -24,6 +24,11 @@ const requestSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
+  },
   reviewedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

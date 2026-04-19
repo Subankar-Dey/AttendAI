@@ -16,7 +16,8 @@ function Toast({ toasts }) {
 
 export default function Requests() {
   const [reason, setReason] = useState('')
-  const [date, setDate] = useState('')
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [priority, setPriority] = useState('medium')
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -51,11 +52,13 @@ export default function Requests() {
     try {
       await api.post('/requests', {
         type: 'ATTENDANCE_CORRECTION',
-        data: { date, reason }
+        data: { date, reason },
+        priority
       })
       toast('Correction request submitted successfully!')
       setReason('')
-      setDate('')
+      setDate(new Date().toISOString().split('T')[0])
+      setPriority('medium')
       fetchRequests()
     } catch (err) {
       toast(err.response?.data?.message || 'Submission failed', 'error')
@@ -73,6 +76,19 @@ export default function Requests() {
     return (
       <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize border ${colors[status]}`}>
         {status}
+      </span>
+    )
+  }
+
+  const priorityBadge = (priority) => {
+    const colors = { 
+      low: 'bg-gray-100 text-gray-600 border-gray-200', 
+      medium: 'bg-blue-100 text-blue-600 border-blue-200', 
+      high: 'bg-red-100 text-red-600 border-red-200' 
+    }
+    return (
+      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${colors[priority || 'medium']}`}>
+        {priority || 'medium'}
       </span>
     )
   }
@@ -115,6 +131,25 @@ export default function Requests() {
                   placeholder="e.g. My attendance was marked absent but I was present in the second half..."
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-relaxed" 
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Priority</label>
+                <div className="flex gap-2">
+                  {['low', 'medium', 'high'].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPriority(p)}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-all capitalize
+                        ${priority === p 
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                        }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button 
                 type="submit" 
@@ -173,6 +208,7 @@ export default function Requests() {
                             })}
                           </p>
                           {statusBadge(r.status)}
+                          {priorityBadge(r.priority)}
                         </div>
                         <p className="text-xs text-gray-400">
                           {r.type.replace(/_/g, ' ')} • Submitted {new Date(r.createdAt).toLocaleString()}
