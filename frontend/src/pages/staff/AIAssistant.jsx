@@ -22,9 +22,10 @@ const QUICK_PROMPTS = [
 ]
 
 const SOURCE_BADGE = {
-  local:    { label: '⚡ Instant',   cls: 'bg-green-100 text-green-700' },
-  openai:   { label: '🤖 AI',        cls: 'bg-blue-100 text-blue-700' },
-  fallback: { label: '💡 Suggested', cls: 'bg-yellow-100 text-yellow-700' },
+  local:   { label: '⚡ Instant',   cls: 'bg-green-100 text-green-700' },
+  ollama:  { label: '🧠 Local AI',  cls: 'bg-violet-100 text-violet-700' },
+  openai:  { label: '🤖 Cloud AI',  cls: 'bg-blue-100 text-blue-700' },
+  fallback:{ label: '💡 Suggested', cls: 'bg-yellow-100 text-yellow-700' },
 }
 
 export default function AIAssistant() {
@@ -186,7 +187,7 @@ export default function AIAssistant() {
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-1.5 ml-1">
-            ⚡ Instant for common queries · 🤖 OpenAI for complex questions
+            ⚡ Instant for common queries · 🧠 Local AI (Ollama) for complex questions
           </p>
         </div>
       </div>
