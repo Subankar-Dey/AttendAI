@@ -2,26 +2,28 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
-import { Bell, LogOut, User, ChevronDown, Menu, X } from 'lucide-react'
+import { Bell, LogOut, User, ChevronDown, Menu, X, Inbox, History, Check } from 'lucide-react'
 
 const Navbar = ({ onMenuClick }) => {
   const { user, logout } = useAuth()
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const { announcements, requests, responses, unreadCounts, markAsRead, markAllAsRead } = useNotifications()
   const navigate = useNavigate()
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showRequests, setShowRequests] = useState(false)
+  const [showResponses, setShowResponses] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const notifRef = useRef(null)
+  const requestRef = useRef(null)
+  const responseRef = useRef(null)
   const userMenuRef = useRef(null)
 
   // Handle click outside to close menus
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setShowUserMenu(false);
-      }
+      if (notifRef.current && !notifRef.current.contains(event.target)) setShowNotifications(false);
+      if (requestRef.current && !requestRef.current.contains(event.target)) setShowRequests(false);
+      if (responseRef.current && !responseRef.current.contains(event.target)) setShowResponses(false);
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) setShowUserMenu(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -43,6 +45,8 @@ const Navbar = ({ onMenuClick }) => {
 
   const closeAll = () => {
     setShowNotifications(false)
+    setShowRequests(false)
+    setShowResponses(false)
     setShowUserMenu(false)
   }
 
@@ -67,74 +71,130 @@ const Navbar = ({ onMenuClick }) => {
         {/* Right Side */}
         <div className="flex items-center gap-2 ml-auto">
 
-          {/* ── Notifications ── */}
+          {/* ── 1. Notifications (Announcements) ── */}
           <div className="relative" ref={notifRef}>
             <button
-              onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false) }}
-              className={`relative p-2 rounded-lg transition-colors ${showNotifications ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+              onClick={() => { closeAll(); setShowNotifications(!showNotifications); }}
+              className={`relative p-2 rounded-lg transition-colors ${showNotifications ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+              title="Notifications"
             >
               <Bell size={20} className={showNotifications ? 'text-blue-600' : 'text-gray-600'} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center border-2 border-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadCounts.announcements > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                  {unreadCounts.announcements}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <div
-                className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-200"
-                style={{ animation: 'fadeSlideDown 0.15s ease-out' }}
-              >
-                  <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
-                    <div className="flex items-center gap-3">
-                      {unreadCount > 0 && (
-                        <button
-                          onClick={markAllAsRead}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setShowNotifications(false)}
-                        className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
-                    {notifications.length === 0 ? (
-                      <div className="px-4 py-10 text-center text-gray-500 text-sm">
-                        <Bell size={32} className="mx-auto mb-2 text-gray-300" />
-                        No notifications
+              <div className="absolute right-0 mt-2 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-[fadeSlideDown_0.2s_ease]">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                  <h3 className="font-bold text-gray-900 text-sm">Notifications 🔔</h3>
+                  <button onClick={() => markAllAsRead('announcements')} className="text-[10px] text-blue-600 font-bold hover:underline">Mark all read</button>
+                </div>
+                <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                  {announcements.length === 0 ? (
+                    <div className="p-10 text-center text-gray-400 text-xs italic">No announcements</div>
+                  ) : (
+                    announcements.map(n => (
+                      <div key={n._id} onClick={() => markAsRead(n._id, 'announcements')} className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isReadByMe ? 'bg-blue-50/40' : ''}`}>
+                        <div className="flex justify-between items-start gap-2">
+                          <p className="text-xs font-bold text-gray-800 underline decoration-blue-200 decoration-2">{n.title}</p>
+                          <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(n.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-2 italic">"{n.message}"</p>
                       </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── 2. Requests (Admin/Teacher Only) ── */}
+          {(user?.role === 'admin' || user?.role === 'staff') && (
+            <div className="relative" ref={requestRef}>
+              <button
+                onClick={() => { closeAll(); setShowRequests(!showRequests); }}
+                className={`relative p-2 rounded-lg transition-colors ${showRequests ? 'bg-orange-50' : 'hover:bg-gray-100'}`}
+                title="Incoming Requests"
+              >
+                <Inbox size={20} className={showRequests ? 'text-orange-600' : 'text-gray-600'} />
+                {unreadCounts.requests > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                    {unreadCounts.requests}
+                  </span>
+                )}
+              </button>
+
+              {showRequests && (
+                <div className="absolute right-0 mt-2 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-[fadeSlideDown_0.2s_ease]">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-orange-50/30">
+                    <h3 className="font-bold text-gray-900 text-sm">Action Required 📥</h3>
+                    <button onClick={() => markAllAsRead('requests')} className="text-[10px] text-orange-600 font-bold hover:underline">Clear Badges</button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                    {requests.length === 0 ? (
+                      <div className="p-10 text-center text-gray-400 text-xs italic">No pending requests</div>
                     ) : (
-                      notifications.map((notif) => (
-                        <div
-                          key={notif._id || notif.id}
-                          className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                            !notif.isReadByMe && !notif.read ? 'bg-blue-50/60' : ''
-                          }`}
-                          onClick={() => markAsRead(notif._id || notif.id)}
-                        >
-                          {(!notif.isReadByMe && !notif.read) && (
-                            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2 align-middle" />
-                          )}
-                          {notif.title && <p className="text-xs font-semibold text-gray-700">{notif.title}</p>}
-                          <p className="text-sm text-gray-800">{notif.message}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {new Date(notif.createdAt).toLocaleString()}
-                          </p>
+                      requests.map(n => (
+                        <div key={n._id} onClick={() => { markAsRead(n._id, 'requests'); navigate('/admin/requests') }} className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isReadByMe ? 'bg-orange-50/40' : ''}`}>
+                          <p className="text-xs font-bold text-gray-800">{n.title}</p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">{n.message}</p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase transition hover:scale-105">View & Action</span>
+                          </div>
                         </div>
                       ))
                     )}
                   </div>
                 </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
+
+          {/* ── 3. Responses (Student Only) ── */}
+          {user?.role === 'student' && (
+            <div className="relative" ref={responseRef}>
+              <button
+                onClick={() => { closeAll(); setShowResponses(!showResponses); }}
+                className={`relative p-2 rounded-lg transition-colors ${showResponses ? 'bg-green-50' : 'hover:bg-gray-100'}`}
+                title="Your Responses"
+              >
+                <History size={20} className={showResponses ? 'text-green-600' : 'text-gray-600'} />
+                {unreadCounts.responses > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                    {unreadCounts.responses}
+                  </span>
+                )}
+              </button>
+
+              {showResponses && (
+                <div className="absolute right-0 mt-2 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-[fadeSlideDown_0.2s_ease]">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-green-50/30">
+                    <h3 className="font-bold text-gray-900 text-sm">Your Outcomes 📤</h3>
+                    <button onClick={() => markAllAsRead('responses')} className="text-[10px] text-green-600 font-bold hover:underline">Clear Badges</button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                    {responses.length === 0 ? (
+                      <div className="p-10 text-center text-gray-400 text-xs italic">No processed updates</div>
+                    ) : (
+                      responses.map(n => (
+                        <div key={n._id} onClick={() => markAsRead(n._id, 'responses')} className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isReadByMe ? 'bg-green-50/40' : ''}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            {n.title.includes('Approved') ? <Check size={12} className="text-green-600" /> : <X size={12} className="text-red-600" />}
+                            <p className="text-xs font-bold text-gray-800">{n.title}</p>
+                          </div>
+                          <p className="text-xs text-gray-500 line-clamp-2">{n.message}</p>
+                          <p className="text-[9px] text-gray-400 mt-2">{new Date(n.createdAt).toLocaleString()}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── User Menu ── */}
           <div className="relative" ref={userMenuRef}>

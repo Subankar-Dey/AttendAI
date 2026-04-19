@@ -5,18 +5,38 @@ import socket from '../services/socket'
 const NotificationContext = createContext(null)
 
 export const NotificationProvider = ({ children }) => {
-  const [notifications, setNotifications] = useState([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [announcements, setAnnouncements] = useState([])
+  const [requests, setRequests] = useState([])
+  const [responses, setResponses] = useState([])
+  
+  const [unreadCounts, setUnreadCounts] = useState({ announcements: 0, requests: 0, responses: 0 })
   const [loading, setLoading] = useState(false)
 
   /* ── Fetch from DB ── */
   const fetchNotifications = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.get('/notifications')
-      const list = res.data.data?.notifications || []
-      setNotifications(list)
-      setUnreadCount(list.filter(n => !n.isReadByMe).length)
+      // Fetch Announcements
+      const resAnn = await api.get('/notifications?category=announcement')
+      const annList = resAnn.data.data?.notifications || []
+      setAnnouncements(annList)
+
+      // Fetch Request Updates (Categorized locally into Requests vs Responses for performance or via separate calls)
+      const resReq = await api.get('/notifications?category=request')
+      const reqList = resReq.data.data?.notifications || []
+      
+      // Split into Requests vs Responses based on title or content patterns if needed, 
+      // but strictly we can just show them in the relevant panel based on user role.
+      // For Admin: These are incoming "New" items.
+      // For Student: These are "Approved/Rejected" items.
+      setRequests(reqList.filter(n => n.title.includes('New')))
+      setResponses(reqList.filter(n => n.title.includes('Approved') || n.title.includes('Rejected')))
+
+      setUnreadCounts({
+        announcements: annList.filter(n => !n.isReadByMe).length,
+        requests: reqList.filter(n => !n.isReadByMe && n.title.includes('New')).length,
+        responses: reqList.filter(n => !n.isReadByMe && (n.title.includes('Approved') || n.title.includes('Rejected'))).length
+      })
     } catch (err) {
       console.error('Failed to fetch notifications:', err)
     } finally {
@@ -37,8 +57,19 @@ export const NotificationProvider = ({ children }) => {
       isReadByMe: false,
       createdAt: new Date().toISOString(),
     }
-    setNotifications(prev => [newNotification, ...prev])
-    setUnreadCount(prev => prev + 1)
+    
+    if (notification.category === 'request') {
+      if (notification.title.includes('New')) {
+        setRequests(prev => [newNotification, ...prev])
+        setUnreadCounts(prev => ({ ...prev, requests: prev.requests + 1 }))
+      } else {
+        setResponses(prev => [newNotification, ...prev])
+        setUnreadCounts(prev => ({ ...prev, responses: prev.responses + 1 }))
+      }
+    } else {
+      setAnnouncements(prev => [newNotification, ...prev])
+      setUnreadCounts(prev => ({ ...prev, announcements: prev.announcements + 1 }))
+    }
   }, [])
 
   useEffect(() => {
@@ -49,23 +80,40 @@ export const NotificationProvider = ({ children }) => {
   }, [addNotification])
 
   /* ── Mark single as read (DB + local) ── */
-  const markAsRead = useCallback(async (notificationId) => {
+  const markAsRead = useCallback(async (notificationId, bucket) => {
     try {
       await api.put(`/notifications/${notificationId}/read`)
     } catch { /* silently ignore */ }
-    setNotifications(prev =>
-      prev.map(n => n._id === notificationId ? { ...n, isReadByMe: true } : n)
-    )
-    setUnreadCount(prev => Math.max(0, prev - 1))
+    
+    const updater = prev => prev.map(n => n._id === notificationId ? { ...n, isReadByMe: true } : n);
+    
+    if (bucket === 'requests') {
+      setRequests(updater)
+      setUnreadCounts(prev => ({ ...prev, requests: Math.max(0, prev.requests - 1) }))
+    } else if (bucket === 'responses') {
+      setResponses(updater)
+      setUnreadCounts(prev => ({ ...prev, responses: Math.max(0, prev.responses - 1) }))
+    } else {
+      setAnnouncements(updater)
+      setUnreadCounts(prev => ({ ...prev, announcements: Math.max(0, prev.announcements - 1) }))
+    }
   }, [])
 
   /* ── Mark all as read ── */
-  const markAllAsRead = useCallback(async () => {
-    const unread = notifications.filter(n => !n.isReadByMe)
+  const markAllAsRead = useCallback(async (bucket) => {
+    const list = bucket === 'requests' ? requests : bucket === 'responses' ? responses : announcements;
+    const unread = list.filter(n => !n.isReadByMe)
     await Promise.allSettled(unread.map(n => api.put(`/notifications/${n._id}/read`)))
-    setNotifications(prev => prev.map(n => ({ ...n, isReadByMe: true })))
-    setUnreadCount(0)
-  }, [notifications])
+    
+    const updater = prev => prev.map(n => ({ ...n, isReadByMe: true }));
+    if (bucket === 'requests') {
+      setRequests(updater); setUnreadCounts(prev => ({ ...prev, requests: 0 }));
+    } else if (bucket === 'responses') {
+      setResponses(updater); setUnreadCounts(prev => ({ ...prev, responses: 0 }));
+    } else {
+      setAnnouncements(updater); setUnreadCounts(prev => ({ ...prev, announcements: 0 }));
+    }
+  }, [announcements, requests, responses])
 
   /* ── Remove locally (after delete) ── */
   const removeNotification = useCallback((notificationId) => {
@@ -77,19 +125,22 @@ export const NotificationProvider = ({ children }) => {
   }, [])
 
   const clearAll = useCallback(() => {
-    setNotifications([])
-    setUnreadCount(0)
+    setAnnouncements([])
+    setRequests([])
+    setResponses([])
+    setUnreadCounts({ announcements: 0, requests: 0, responses: 0 })
   }, [])
 
   const value = {
-    notifications,
-    unreadCount,
+    announcements,
+    requests,
+    responses,
+    unreadCounts,
     loading,
     fetchNotifications,
     addNotification,
     markAsRead,
     markAllAsRead,
-    removeNotification,
     clearAll,
   }
 

@@ -20,6 +20,11 @@ const notificationSchema = new mongoose.Schema({
     enum: ['all', 'students', 'staff', 'individual'],
     default: 'all'
   },
+  category: {
+    type: String,
+    enum: ['announcement', 'system', 'request'],
+    default: 'announcement'
+  },
   recipients: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

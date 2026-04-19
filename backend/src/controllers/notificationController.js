@@ -5,7 +5,7 @@ import AppError from '../utils/AppError.js';
 
 /* ── Send / Create ─────────────────────────────── */
 export const send = catchAsync(async (req, res, next) => {
-  const { title, message, type, target, priority } = req.body;
+  const { title, message, type, target, priority, category } = req.body;
 
   if (!title?.trim()) return next(new AppError('Title is required.', 400));
   if (!message?.trim()) return next(new AppError('Message is required.', 400));
@@ -30,7 +30,8 @@ export const send = catchAsync(async (req, res, next) => {
     target: target || 'all',
     recipients,
     sentBy: req.user._id,
-    priority: priority || 'normal'
+    priority: priority || 'normal',
+    category: category || 'announcement'
   });
 
   await notification.populate('sentBy', 'name email');
@@ -54,21 +55,8 @@ export const getSent = catchAsync(async (req, res, next) => {
 
 /* ── Get notifications for current user ────────── */
 export const getNotifications = catchAsync(async (req, res, next) => {
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 20, category = 'announcement' } = req.query;
   const userId = req.user._id;
-
-  // User sees: 
-  // 1. Their own specific notifications
-  // 2. Targeted to their role (students/staff)
-  // 3. Global broadcasts
-  const query = {
-    $or: [
-      { recipients: userId },
-      { $and: [ { target: 'students' }, { recipients: { $exists: true } } ], _roleFilter: 'student' }, // logic handled below
-      { $and: [ { target: 'staff' }, { recipients: { $exists: true } } ], _roleFilter: 'staff' },
-      { target: 'all' }
-    ]
-  };
 
   // Re-writing query for better precision based on current user role
   const finalQuery = {
@@ -77,6 +65,9 @@ export const getNotifications = catchAsync(async (req, res, next) => {
       { target: 'all' }
     ]
   };
+
+  if (category) finalQuery.category = category;
+  else finalQuery.category = { $ne: 'request' }; // Default: filter out request outcomes
 
   if (req.user.role === 'student') finalQuery.$or.push({ target: 'students' });
   if (req.user.role === 'staff' || req.user.role === 'admin') finalQuery.$or.push({ target: 'staff' });

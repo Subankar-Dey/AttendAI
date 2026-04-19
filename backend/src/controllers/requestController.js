@@ -17,6 +17,7 @@ export const createRequest = async (req, res) => {
     message: `${req.user.name} submitted a new ${req.body.type.replace(/_/g, ' ')}.`,
     target: 'staff',
     type: 'in-app',
+    category: 'request', // Structured separate flow
     sentBy: req.user._id
   });
 
@@ -91,6 +92,7 @@ export const approveRequest = async (req, res) => {
     target: 'individual',
     recipients: [request.requestedBy],
     type: 'in-app',
+    category: 'request', // Structured separate flow
     sentBy: req.user._id
   });
   if (global._io) {
@@ -130,6 +132,7 @@ export const rejectRequest = async (req, res) => {
     target: 'individual',
     recipients: [request.requestedBy],
     type: 'in-app',
+    category: 'request', // Structured separate flow
     sentBy: req.user._id
   });
   if (global._io) {
